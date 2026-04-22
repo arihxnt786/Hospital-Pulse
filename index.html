@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hospital OPD Analyzer</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── CSS Variables ─────────────────────────────────────────── */
+    :root {
+      --bg:        #0b0d14;
+      --surface:   #111420;
+      --card:      #161929;
+      --border:    #1f2436;
+      --accent:    #4f8ef7;
+      --accent2:   #f7934f;
+      --accent3:   #4ff7a0;
+      --danger:    #f74f6b;
+      --text:      #dde3f5;
+      --muted:     #6b758f;
+      --mono:      "Space Mono", monospace;
+      --sans:      "DM Sans", sans-serif;
+      --radius:    12px;
+      --glow:      0 0 24px rgba(79,142,247,0.18);
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Scanlines overlay ─────────────────────────────────────── */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.012) 2px,
+        rgba(255,255,255,0.012) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ── Nav ───────────────────────────────────────────────────── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2.5rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11,13,20,0.92);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-brand {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+    .nav-brand span { color: var(--accent2); }
+    .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      display: inline-block;
+      margin-right: 6px;
+      animation: pulse-red 2s infinite;
+    }
+    .status-dot.active { background: var(--accent3); animation: pulse-green 2s infinite; }
+    @keyframes pulse-red   { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+    @keyframes pulse-green { 0%,100%{box-shadow:0 0 0 0 rgba(79,247,160,0.4);} 70%{box-shadow:0 0 0 6px transparent;} }
+
+    /* ── Layout ────────────────────────────────────────────────── */
+    main { max-width: 1280px; margin: 0 auto; padding: 2.5rem 2rem; }
+
+    /* ── Hero ──────────────────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 3rem 0 2rem;
+      position: relative;
+    }
+    .hero-badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--accent3);
+      border: 1px solid var(--accent3);
+      padding: 3px 12px;
+      border-radius: 99px;
+      margin-bottom: 1.2rem;
+      letter-spacing: 0.1em;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-family: var(--mono);
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 0.8rem;
+    }
+    .hero h1 .hl { color: var(--accent); }
+    .hero h1 .hl2 { color: var(--accent2); }
+    .hero p {
+      color: var(--muted);
+      max-width: 540px;
+      margin: 0 auto 2rem;
+      font-size: 0.95rem;
+    }
+
+    /* ── Stats Bar ─────────────────────────────────────────────── */
+    .stats-bar {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 2.5rem;
+    }
+    .stat-pill {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 0.45rem 1.2rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .stat-pill .val { color: var(--accent); font-weight: 700; }
+
+    /* ── Grid ──────────────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-bottom: 1.5rem; }
+    .full-w  { grid-column: 1 / -1; }
+
+    @media (max-width: 768px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      nav { padding: 1rem; }
+    }
+
+    /* ── Card ──────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .card:hover { border-color: rgba(79,142,247,0.35); box-shadow: var(--glow); }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.2rem;
+    }
+    .card-title {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card-title .icon { font-size: 1rem; }
+
+    /* ── Upload Zone ───────────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.dragging {
+      border-color: var(--accent);
+      background: rgba(79,142,247,0.04);
+    }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .upload-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+    .upload-text { color: var(--muted); font-size: 0.88rem; }
+    .upload-text strong { color: var(--text); }
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #6aa0ff; transform: translateY(-1px); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--accent2);
+      border: 1px solid var(--accent2);
+    }
+    .btn-secondary:hover { background: rgba(247,147,79,0.1); }
+    .btn-success {
+      background: var(--accent3);
+      color: #0b0d14;
+    }
+    .btn-success:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+      font-size: 0.75rem;
+      padding: 0.4rem 1rem;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+    .btn-row { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 1.2rem; }
+
+    /* ── Progress / Loader ─────────────────────────────────────── */
+    .loader {
+      display: none;
+      align-items: center;
+      gap: 0.7rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      margin-top: 1rem;
+    }
+    .loader.show { display: flex; }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ─────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.5rem;
+      font-size: 0.9rem;
+      max-width: 360px;
+      z-index: 9000;
+      transform: translateY(120%);
+      transition: transform 0.3s ease;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    #toast.show { transform: translateY(0); }
+    #toast.success { border-color: var(--accent3); color: var(--accent3); }
+    #toast.error   { border-color: var(--danger);  color: var(--danger);  }
+    #toast.info    { border-color: var(--accent);  color: var(--accent);  }
+
+    /* ── Section Label ─────────────────────────────────────────── */
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-label::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Chart image ───────────────────────────────────────────── */
+    .chart-img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: block;
+    }
+    .chart-placeholder {
+      aspect-ratio: 16/7;
+      background: var(--surface);
+      border-radius: 8px;
+      border: 1px dashed var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-family: var(--mono);
+    }
+
+    /* ── Insight Cards ─────────────────────────────────────────── */
+    .insight-item {
+      background: var(--surface);
+      border-left: 3px solid var(--border);
+      border-radius: 0 8px 8px 0;
+      padding: 0.9rem 1.1rem;
+      margin-bottom: 0.7rem;
+      transition: border-color 0.2s;
+    }
+    .insight-item.high   { border-color: var(--danger); }
+    .insight-item.medium { border-color: var(--accent2); }
+    .insight-item.low    { border-color: var(--accent3); }
+    .insight-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.3rem; }
+    .insight-detail { color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+
+    /* ── Prediction Table ──────────────────────────────────────── */
+    .pred-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .pred-table th {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .pred-table td {
+      padding: 0.7rem 0.8rem;
+      border-bottom: 1px solid rgba(31,36,54,0.5);
+      color: var(--text);
+    }
+    .pred-table tr:last-child td { border-bottom: none; }
+    .pred-table tr:hover td { background: rgba(79,142,247,0.04); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-family: var(--mono);
+      font-weight: 700;
+    }
+    .badge-high   { background: rgba(247,79,107,0.15); color: var(--danger); }
+    .badge-medium { background: rgba(247,147,79,0.15); color: var(--accent2); }
+    .badge-low    { background: rgba(79,247,160,0.15); color: var(--accent3); }
+
+    /* ── Metric numbers ────────────────────────────────────────── */
+    .metric-big {
+      font-family: var(--mono);
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .metric-label { font-size: 0.78rem; color: var(--muted); }
+
+    /* ── Absence table ─────────────────────────────────────────── */
+    .absence-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+    .absence-table th {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.5rem 0.7rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .absence-table td { padding: 0.65rem 0.7rem; border-bottom: 1px solid rgba(31,36,54,0.4); }
+    .absence-table tr:hover td { background: rgba(79,142,247,0.04); }
+
+    /* ── Busy Day bars ─────────────────────────────────────────── */
+    .day-bar-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.55rem; }
+    .day-label { font-family: var(--mono); font-size: 0.78rem; width: 90px; color: var(--muted); flex-shrink: 0; }
+    .day-bar-track { flex: 1; background: var(--surface); border-radius: 99px; height: 8px; overflow: hidden; }
+    .day-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width 1s ease; }
+    .day-val { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); width: 40px; text-align: right; }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      border-top: 1px solid var(--border);
+      margin-top: 4rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ────────────────────────────────────────────── -->
+<nav>
+  <span class="nav-brand">🏥 OPD<span>.</span>ANALYZER</span>
+  <div class="nav-links">
+    <span>
+      <span class="status-dot {% if has_data %}active{% endif %}" id="statusDot"></span>
+      <span id="statusText" style="font-size:0.8rem; font-family:var(--mono);">
+        {% if has_data %}DATA LOADED{% else %}NO DATA{% endif %}
+      </span>
+    </span>
+    <a href="/sample-csv">⬇ Sample CSV</a>
+    <a href="#insights">Insights</a>
+    <a href="#predictions">Predictions</a>
+  </div>
+</nav>
+
+<!-- ── Toast ─────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- ── Main ──────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">HOSPITAL ANALYTICS PLATFORM</div>
+    <h1>Wait Time &amp; Overcrowding<br/><span class="hl">Pattern</span> <span class="hl2">Analyzer</span></h1>
+    <p>Upload OPD data, detect peak hours, identify doctor absence impact, and predict next week's patient load — all in one dashboard.</p>
+
+    {% if has_data %}
+    <div class="stats-bar" id="statsPills">
+      <div class="stat-pill">Records <span class="val">{{ stats.total_records }}</span></div>
+      <div class="stat-pill">Departments <span class="val">{{ stats.departments }}</span></div>
+      <div class="stat-pill">From <span class="val">{{ stats.start_date }}</span></div>
+      <div class="stat-pill">To <span class="val">{{ stats.end_date }}</span></div>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- ── Upload + Controls ──────────────────────────────────── -->
+  <div class="section-label">⬆ Data Input</div>
+  <div class="grid-2" style="margin-bottom:2rem;">
+
+    <!-- Upload card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">📁</span> Upload OPD Dataset</span>
+      </div>
+      <div class="upload-zone" id="dropzone">
+        <input type="file" id="csvFile" accept=".csv" />
+        <div class="upload-icon">📂</div>
+        <div class="upload-text">
+          <strong>Click to browse</strong> or drag &amp; drop<br/>
+          CSV file with columns: <code>date, time, department, wait_time, outcome</code>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="uploadBtn">⬆ Upload CSV</button>
+        <a href="/sample-csv" class="btn btn-secondary">⬇ Sample CSV</a>
+        <button class="btn btn-danger" id="clearBtn">🗑 Clear Data</button>
+      </div>
+      <div class="loader" id="uploadLoader"><div class="spinner"></div>Uploading &amp; validating…</div>
+    </div>
+
+    <!-- Run analysis card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">⚡</span> Analysis Controls</span>
+      </div>
+      <p style="color:var(--muted); font-size:0.88rem; margin-bottom:1.2rem;">
+        After uploading your data, run the full analysis pipeline to generate charts,
+        insights, predictions, and the PDF report.
+      </p>
+      <div class="btn-row">
+        <button class="btn btn-success" id="analyzeBtn" {% if not has_data %}disabled{% endif %}>
+          ⚡ Run Analysis
+        </button>
+        <a href="/report" class="btn btn-primary" id="reportBtn" {% if not has_data %}style="pointer-events:none;opacity:0.4;"{% endif %}>
+          📄 Download PDF Report
+        </a>
+      </div>
+      <div class="loader" id="analyzeLoader"><div class="spinner"></div>Running analysis pipeline…</div>
+
+      {% if has_data %}
+      <div style="margin-top:1.2rem; padding:0.8rem; background:var(--surface); border-radius:8px; border:1px solid var(--border);">
+        <div style="font-family:var(--mono); font-size:0.72rem; color:var(--muted); margin-bottom:0.4rem;">CURRENT DATASET</div>
+        <div style="font-size:0.85rem;">
+          {{ stats.total_records }} records &bull; {{ stats.departments }} departments &bull;
+          {{ stats.start_date }} → {{ stats.end_date }}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Charts Section ──────────────────────────────────────── -->
+  <div class="section-label" id="charts">📊 Visualizations</div>
+  <div class="grid-2" id="chartsGrid">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">🗺</span> Volume Heatmap</span>
+      </div>
+      <div id="heatmapContainer" class="chart-placeholder">Run analysis to generate charts</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">📊</span> Dept Avg Wait</span>
+      </div>
+      <div id="deptBarContainer" class="chart-placeholder">Run analysis to generate charts</div>
+    </div>
+
+    <div class="card full-w">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">📈</span> Wait Time Trend</span>
+      </div>
+      <div id="trendContainer" class="chart-placeholder">Run analysis to generate charts</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">📉</span> Time Slot Breakdown</span>
+      </div>
+      <div id="stackedBarContainer" class="chart-placeholder">Run analysis to generate charts</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">〰</span> Weekday Ridge Plot</span>
+      </div>
+      <div id="ridgeContainer" class="chart-placeholder">Run analysis to generate charts</div>
+    </div>
+
+  </div>
+
+  <!-- ── Prediction Chart ──────────────────────────────────── -->
+  <div class="section-label" id="predictions">🔮 Predictions</div>
+  <div class="grid-2" style="margin-bottom:1.5rem;">
+
+    <div class="card full-w">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">🔮</span> 7-Day Wait Time Forecast (Linear Regression)</span>
+        <span id="modelMetrics" style="font-family:var(--mono); font-size:0.75rem; color:var(--muted);"></span>
+      </div>
+      <div id="predChartContainer" class="chart-placeholder">Run analysis to generate forecast</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">📅</span> Next 7-Day Forecast Table</span>
+      </div>
+      <div id="predTableContainer">
+        <div class="chart-placeholder" style="aspect-ratio:auto; padding:2rem;">Awaiting analysis…</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">📆</span> Busiest Days Prediction</span>
+      </div>
+      <div id="busyDaysContainer">
+        <div class="chart-placeholder" style="aspect-ratio:auto; padding:2rem;">Awaiting analysis…</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Insights + Absence ──────────────────────────────────── -->
+  <div class="section-label" id="insights">💡 Insights & Absence Impact</div>
+  <div class="grid-2" style="margin-bottom:1.5rem;">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">💡</span> Actionable Insights</span>
+      </div>
+      <div id="insightsContainer">
+        <div class="chart-placeholder" style="aspect-ratio:auto; padding:2rem;">Run analysis to see insights</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">🏥</span> Doctor Absence Impact</span>
+      </div>
+      <div id="absenceContainer">
+        <div class="chart-placeholder" style="aspect-ratio:auto; padding:2rem;">Run analysis to see impact</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Peak Hours Table ──────────────────────────────────── -->
+  <div class="section-label">🕐 Peak Hours by Department</div>
+  <div class="card" style="margin-bottom:2rem;">
+    <div id="peakHoursContainer">
+      <div class="chart-placeholder" style="aspect-ratio:auto; padding:1.5rem;">Run analysis to see peak hours</div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Built for JIIT BCA Students · Hospital OPD Analyzer · Powered by Flask + scikit-learn
+</footer>
+
+<!-- ── JavaScript ─────────────────────────────────────────────── -->
+<script>
+  /* ── Toast helper ─────────────────────────────────────── */
+  function showToast(msg, type = "info") {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className   = `show ${type}`;
+    setTimeout(() => { t.className = ""; }, 4000);
+  }
+
+  /* ── Upload handler ───────────────────────────────────── */
+  document.getElementById("uploadBtn").addEventListener("click", async () => {
+    const file = document.getElementById("csvFile").files[0];
+    if (!file) { showToast("Please select a CSV file first.", "error"); return; }
+
+    const loader = document.getElementById("uploadLoader");
+    const btn    = document.getElementById("uploadBtn");
+    loader.classList.add("show");
+    btn.disabled = true;
+
+    const fd = new FormData();
+    fd.append("file", file);
+
+    try {
+      const res  = await fetch("/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, "success");
+        // Update status
+        document.getElementById("statusDot").classList.add("active");
+        document.getElementById("statusText").textContent = "DATA LOADED";
+        document.getElementById("analyzeBtn").disabled = false;
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast("Upload failed: " + data.error, "error");
+      }
+    } catch(e) {
+      showToast("Network error: " + e.message, "error");
+    } finally {
+      loader.classList.remove("show");
+      btn.disabled = false;
+    }
+  });
+
+  /* ── Drag & drop ──────────────────────────────────────── */
+  const dz = document.getElementById("dropzone");
+  dz.addEventListener("dragover",  (e) => { e.preventDefault(); dz.classList.add("dragging"); });
+  dz.addEventListener("dragleave", ()  => { dz.classList.remove("dragging"); });
+  dz.addEventListener("drop",      (e) => {
+    e.preventDefault();
+    dz.classList.remove("dragging");
+    document.getElementById("csvFile").files = e.dataTransfer.files;
+    document.querySelector(".upload-text strong").textContent = e.dataTransfer.files[0]?.name || "File selected";
+  });
+
+  /* ── Analyze handler ──────────────────────────────────── */
+  document.getElementById("analyzeBtn").addEventListener("click", async () => {
+    const loader = document.getElementById("analyzeLoader");
+    const btn    = document.getElementById("analyzeBtn");
+    loader.classList.add("show");
+    btn.disabled = true;
+    showToast("Running analysis pipeline… this may take 10–20 seconds.", "info");
+
+    try {
+      const res  = await fetch("/analyze");
+      const data = await res.json();
+      if (!data.success) {
+        showToast("Analysis failed: " + data.error, "error");
+        return;
+      }
+      renderResults(data);
+      showToast("✅ Analysis complete! Scroll down to see results.", "success");
+    } catch(e) {
+      showToast("Error: " + e.message, "error");
+    } finally {
+      loader.classList.remove("show");
+      btn.disabled = false;
+    }
+  });
+
+  /* ── Clear data ───────────────────────────────────────── */
+  document.getElementById("clearBtn").addEventListener("click", async () => {
+    if (!confirm("Clear all data? This cannot be undone.")) return;
+    const res  = await fetch("/clear", { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      showToast("Data cleared.", "info");
+      setTimeout(() => location.reload(), 1200);
+    }
+  });
+
+  /* ── Render all results ───────────────────────────────── */
+  function renderResults(data) {
+    const cp = data.chart_paths;
+
+    // Charts
+    setChart("heatmapContainer",    cp.heatmap);
+    setChart("deptBarContainer",    cp.dept_bar);
+    setChart("trendContainer",      cp.trend);
+    setChart("stackedBarContainer", cp.stacked_bar);
+    setChart("ridgeContainer",      cp.ridge);
+    setChart("predChartContainer",  cp.prediction);
+
+    // Model metrics
+    const m = data.predictions?.metrics || {};
+    document.getElementById("modelMetrics").textContent =
+      `MAE: ${m.mae ?? '?'} min | R²: ${m.r2 ?? '?'} | ${m.trend_direction ?? ''}`;
+
+    // Prediction table
+    renderPredTable(data.predictions?.next_7_days || []);
+
+    // Busy days
+    renderBusyDays(data.busy_days || []);
+
+    // Insights
+    renderInsights(data.insights || []);
+
+    // Absence
+    renderAbsence(data.absence || {});
+
+    // Peak hours
+    renderPeakHours(data.peak_hours || []);
+  }
+
+  function setChart(containerId, src) {
+    const el = document.getElementById(containerId);
+    if (!el || !src) return;
+    el.className = "";
+    el.innerHTML = `<img class="chart-img" src="${src}?t=${Date.now()}" alt="chart" />`;
+  }
+
+  function renderPredTable(rows) {
+    if (!rows.length) return;
+    let html = `<table class="pred-table">
+      <thead><tr><th>Date</th><th>Day</th><th>Predicted Wait (min)</th></tr></thead><tbody>`;
+    rows.forEach(r => {
+      const w = parseFloat(r.predicted_wait);
+      const cls = w > 60 ? "high" : w > 40 ? "medium" : "low";
+      html += `<tr>
+        <td style="font-family:var(--mono)">${r.date}</td>
+        <td>${r.day_of_week}</td>
+        <td><span class="badge badge-${cls}">${r.predicted_wait} min</span></td>
+      </tr>`;
+    });
+    html += "</tbody></table>";
+    document.getElementById("predTableContainer").innerHTML = html;
+  }
+
+  function renderBusyDays(rows) {
+    if (!rows.length) return;
+    const max = rows[0].load_score; // already sorted by rank
+    const maxScore = Math.max(...rows.map(r => r.load_score));
+    let html = "";
+    rows.forEach(r => {
+      const pct = maxScore ? (r.load_score / maxScore * 100).toFixed(0) : 0;
+      const color = r.rank === 1 ? "var(--danger)" : r.rank <= 3 ? "var(--accent2)" : "var(--accent)";
+      html += `<div class="day-bar-row">
+        <span class="day-label">${r.day.substring(0,3)}</span>
+        <div class="day-bar-track"><div class="day-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+        <span class="day-val">${r.predicted_patients}</span>
+      </div>`;
+    });
+    html += `<div style="margin-top:0.8rem; font-size:0.78rem; color:var(--muted);">
+      Rec: <span style="color:var(--accent2);">${rows[0]?.recommendation ?? ''}</span> on ${rows[0]?.day ?? ''}
+    </div>`;
+    document.getElementById("busyDaysContainer").innerHTML = html;
+  }
+
+  function renderInsights(items) {
+    if (!items.length) return;
+    let html = "";
+    items.forEach(i => {
+      html += `<div class="insight-item ${i.severity}">
+        <div class="insight-title">${i.title}</div>
+        <div class="insight-detail">${i.detail}</div>
+      </div>`;
+    });
+    document.getElementById("insightsContainer").innerHTML = html;
+  }
+
+  function renderAbsence(data) {
+    const table = data.table || [];
+    if (!table.length) return;
+    let html = `<div style="margin-bottom:0.8rem; padding:0.7rem; background:rgba(247,79,107,0.08); border:1px solid rgba(247,79,107,0.3); border-radius:8px; font-size:0.85rem;">
+      ⚠️ <strong>${data.worst_dept}</strong> causes <strong>+${data.worst_impact} min</strong> cascading delay on stressed days.
+    </div>
+    <table class="absence-table">
+      <thead><tr><th>Department</th><th>Normal</th><th>Stressed</th><th>+Delay</th><th>Days</th></tr></thead><tbody>`;
+    table.forEach(r => {
+      html += `<tr>
+        <td style="font-weight:600">${r.department}</td>
+        <td style="color:var(--accent3)">${r.normal_avg_wait}m</td>
+        <td style="color:var(--accent2)">${r.stressed_avg_wait}m</td>
+        <td style="color:var(--danger); font-family:var(--mono)">+${r.cascading_delay}m</td>
+        <td style="color:var(--muted)">${r.stressed_days}</td>
+      </tr>`;
+    });
+    html += "</tbody></table>";
+    document.getElementById("absenceContainer").innerHTML = html;
+  }
+
+  function renderPeakHours(rows) {
+    if (!rows.length) return;
+    let html = `<table class="pred-table">
+      <thead><tr><th>Department</th><th>Peak Hour</th><th>Avg Wait at Peak</th></tr></thead><tbody>`;
+    rows.forEach(r => {
+      html += `<tr>
+        <td style="font-weight:600">${r.department}</td>
+        <td style="font-family:var(--mono)">${String(r.peak_hour).padStart(2,'0')}:00</td>
+        <td><span class="badge badge-${r.avg_wait_at_peak > 60 ? 'high' : r.avg_wait_at_peak > 40 ? 'medium' : 'low'}">${r.avg_wait_at_peak} min</span></td>
+      </tr>`;
+    });
+    html += "</tbody></table>";
+    document.getElementById("peakHoursContainer").innerHTML = html;
+  }
+</script>
+</body>
+</html>

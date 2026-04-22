@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.venv
+venv/
+instance/
+uploads/*.csv
+static/charts/*.png
+static/reports/*.pdf
+*.db
+.DS_Store
