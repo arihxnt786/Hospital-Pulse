@@ -85,6 +85,6 @@ This project demonstrates data ingestion, exploratory analytics, machine learnin
 
 ## Author
 
-**Arihant** — BCA student at JIIT Delhi
+**Arihant Gupta** — BCA student at JIIT Noida
 
 [GitHub](https://github.com/arihxnt786)
